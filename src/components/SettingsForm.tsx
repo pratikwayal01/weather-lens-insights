@@ -42,7 +42,7 @@ const SettingsForm: React.FC = () => {
   const form = useForm<ConfigFormValues>({
     resolver: zodResolver(configFormSchema),
     defaultValues: {
-      apiKey: config.apiKey,
+      apiKey: '952e1fa750dbdf15c432e043c5e8c9a1',
       updateInterval: config.updateInterval,
       temperatureUnit: config.temperatureUnit
     }

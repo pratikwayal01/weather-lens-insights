@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ProcessedWeatherData, DailySummary, Alert, AppConfig, CityInfo } from '@/types/weather';
@@ -44,7 +45,7 @@ export const useWeatherStore = create<WeatherStore>()(
     (set, get) => ({
       // Default configuration
       config: {
-        apiKey: '', // User needs to provide their own API key
+        apiKey: '952e1fa750dbdf15c432e043c5e8c9a1', // Updated API key
         updateInterval: 5, // Default to 5 minutes
         temperatureUnit: 'celsius',
         cities: CITIES,
