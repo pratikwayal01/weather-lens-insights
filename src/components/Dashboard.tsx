@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,7 @@ const Dashboard: React.FC = () => {
     if (!config.apiKey) {
       toast({
         title: "API key missing",
-        description: "Please provide an OpenWeatherMap API key in the settings.",
+        description: "Please provide an OpenWeatherMap API key in the settings. You need to create a free account at OpenWeatherMap.org to get an API key.",
         variant: "destructive"
       });
       setActiveTab('settings');
@@ -70,10 +69,18 @@ const Dashboard: React.FC = () => {
       // Update daily summaries
       updateDailySummaries();
       
-      toast({
-        title: "Data updated",
-        description: "Weather data has been refreshed successfully."
-      });
+      if (Object.keys(newWeatherData).length === 0) {
+        toast({
+          title: "API Key Issue",
+          description: "No data was returned. Your API key may be invalid or not activated. Please check your OpenWeatherMap account.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Data updated",
+          description: "Weather data has been refreshed successfully."
+        });
+      }
     } catch (error) {
       console.error("Error refreshing weather data:", error);
       toast({
@@ -126,6 +133,16 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-500 mb-4">
             Please provide your OpenWeatherMap API key in the settings below to start monitoring the weather.
           </p>
+          <div className="max-w-md mx-auto bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <h4 className="font-medium text-yellow-800 mb-1">How to get an API key:</h4>
+            <ol className="list-decimal pl-5 text-sm text-yellow-700">
+              <li>Go to <a href="https://openweathermap.org/api" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">OpenWeatherMap.org</a> and create a free account</li>
+              <li>After signing up, go to "API keys" section in your account</li>
+              <li>Copy your API key (or create a new one)</li>
+              <li>Paste it in the settings below</li>
+              <li>Note: New API keys may take up to 2 hours to activate</li>
+            </ol>
+          </div>
           <SettingsForm />
         </div>
       );
@@ -196,7 +213,20 @@ const Dashboard: React.FC = () => {
             </>
           ) : (
             <div className="text-center py-10">
-              <p>No weather data available for {cityName}. Click Refresh to fetch data.</p>
+              <p className="mb-4">No weather data available for {cityName}. Click Refresh to fetch data.</p>
+              <div className="max-w-md mx-auto bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-medium text-yellow-800 flex items-center mb-1">
+                  <AlertTriangle className="h-4 w-4 mr-1" /> API Key Issue?
+                </h4>
+                <p className="text-sm text-yellow-700 mb-2">
+                  If you're seeing this message after clicking Refresh, your API key may be invalid or not yet activated.
+                </p>
+                <ul className="list-disc pl-5 text-sm text-yellow-700">
+                  <li>New OpenWeatherMap API keys can take up to 2 hours to activate</li>
+                  <li>Verify that you've copied the correct key from your OpenWeatherMap account</li>
+                  <li>Check the settings tab to update your API key</li>
+                </ul>
+              </div>
             </div>
           )}
         </TabsContent>

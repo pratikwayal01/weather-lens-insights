@@ -17,10 +17,14 @@ export const fetchCityWeather = async (
     const { lat, lon } = cityInfo;
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}`;
     
+    console.log(`Fetching weather for ${cityInfo.name} with API key: ${apiKey.substring(0, 5)}...`);
+    
     const response = await fetch(url);
     
     if (response.status === 401) {
-      throw new Error('Invalid API key. Please check your OpenWeatherMap API key in the settings.');
+      const responseData = await response.json();
+      console.error('API Key Error:', responseData);
+      throw new Error('Invalid API key. Please check your OpenWeatherMap API key in the settings and ensure it is active.');
     }
     
     if (!response.ok) {
@@ -62,6 +66,16 @@ export const fetchAllCitiesWeather = async (
       toast({
         title: "API Key Missing",
         description: "Please enter your OpenWeatherMap API key in the settings.",
+        variant: "destructive",
+      });
+      return {};
+    }
+
+    // Check if API key format is valid (to catch common mistakes)
+    if (apiKey.length < 20) {
+      toast({
+        title: "Invalid API Key Format",
+        description: "The API key appears to be too short. Please check your OpenWeatherMap API key.",
         variant: "destructive",
       });
       return {};
