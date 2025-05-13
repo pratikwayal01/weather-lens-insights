@@ -1,18 +1,21 @@
+
 import React, { useEffect, useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useWeatherStore } from '@/store/weatherStore';
-import { ProcessedWeatherData, DailySummary as DailySummaryType } from '@/types/weather';
-import WeatherCard from './WeatherCard';
-import CitySelector from './CitySelector';
-import AlertsList from './AlertsList';
-import DailySummary from './DailySummary';
-import SettingsForm from './SettingsForm';
-import AlertConfig from './AlertConfig';
-import { fetchAllCitiesWeather } from '@/services/weatherService';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, Settings, AlertTriangle } from 'lucide-react';
+import { fetchAllCitiesWeather } from '@/services/weatherService';
+
+// Imported components
+import CitySelector from './CitySelector';
+import SettingsForm from './SettingsForm';
+import DashboardHeader from './dashboard/DashboardHeader';
+import DashboardTabs from './dashboard/DashboardTabs';
+import WelcomeScreen from './dashboard/WelcomeScreen';
+import LoadingScreen from './dashboard/LoadingScreen';
+import CurrentWeatherTab from './dashboard/CurrentWeatherTab';
+import DailySummaryTab from './dashboard/DailySummaryTab';
+import AlertsTab from './dashboard/AlertsTab';
 
 const Dashboard: React.FC = () => {
   const { 
@@ -126,158 +129,53 @@ const Dashboard: React.FC = () => {
   const renderContent = () => {
     // If no API key is set, show settings first
     if (!config.apiKey) {
-      return (
-        <div className="text-center py-10">
-          <Settings className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-medium mb-2">API Key Required</h3>
-          <p className="text-gray-500 mb-4">
-            Please provide your OpenWeatherMap API key in the settings below to start monitoring the weather.
-          </p>
-          <div className="max-w-md mx-auto bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-yellow-800 mb-1">How to get an API key:</h4>
-            <ol className="list-decimal pl-5 text-sm text-yellow-700">
-              <li>Go to <a href="https://openweathermap.org/api" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">OpenWeatherMap.org</a> and create a free account</li>
-              <li>After signing up, go to "API keys" section in your account</li>
-              <li>Copy your API key (or create a new one)</li>
-              <li>Paste it in the settings below</li>
-              <li>Note: New API keys may take up to 2 hours to activate</li>
-            </ol>
-          </div>
-          <SettingsForm />
-        </div>
-      );
+      return <WelcomeScreen />;
     }
     
     // If loading for the first time with no data
     if (isLoading && !currentWeather) {
-      return (
-        <div className="text-center py-20">
-          <RefreshCw className="h-12 w-12 mx-auto mb-4 text-blue-500 animate-spin" />
-          <h3 className="text-lg font-medium">Loading weather data...</h3>
-        </div>
-      );
+      return <LoadingScreen />;
     }
     
     // If we have data to display
     return (
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="current">Current Weather</TabsTrigger>
-            <TabsTrigger value="summary">Daily Summary</TabsTrigger>
-            <TabsTrigger value="alerts" className="relative">
-              Alerts
-              {hasUnacknowledgedAlerts && (
-                <span className="absolute top-0 right-0 -mt-1 -mr-1 h-2 w-2 rounded-full bg-red-500"></span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-2">
-            {lastUpdated && (
-              <span className="text-xs text-gray-500">
-                Last updated: {format(new Date(lastUpdated), 'HH:mm:ss')}
-              </span>
-            )}
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={handleRefresh} 
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        </div>
+        <DashboardTabs 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          hasUnacknowledgedAlerts={hasUnacknowledgedAlerts}
+          lastUpdated={lastUpdated}
+          isLoading={isLoading}
+          handleRefresh={handleRefresh}
+        />
         
         {/* City selector */}
         <CitySelector />
         
         {/* Content for each tab */}
         <TabsContent value="current" className="space-y-6">
-          {currentWeather ? (
-            <>
-              <h2 className="text-2xl font-bold">{cityName} - Current Weather</h2>
-              <WeatherCard weatherData={currentWeather} className="max-w-md" />
-              
-              <div className="mt-6">
-                <h3 className="text-lg font-medium mb-3">Recent Readings</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {cityWeatherData.slice(1, 4).map((data, index) => (
-                    <WeatherCard key={index} weatherData={data} />
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-10">
-              <p className="mb-4">No weather data available for {cityName}. Click Refresh to fetch data.</p>
-              <div className="max-w-md mx-auto bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h4 className="font-medium text-yellow-800 flex items-center mb-1">
-                  <AlertTriangle className="h-4 w-4 mr-1" /> API Key Issue?
-                </h4>
-                <p className="text-sm text-yellow-700 mb-2">
-                  If you're seeing this message after clicking Refresh, your API key may be invalid or not yet activated.
-                </p>
-                <ul className="list-disc pl-5 text-sm text-yellow-700">
-                  <li>New OpenWeatherMap API keys can take up to 2 hours to activate</li>
-                  <li>Verify that you've copied the correct key from your OpenWeatherMap account</li>
-                  <li>Check the settings tab to update your API key</li>
-                </ul>
-              </div>
-            </div>
-          )}
+          <CurrentWeatherTab 
+            currentWeather={currentWeather}
+            cityWeatherData={cityWeatherData}
+            cityName={cityName}
+          />
         </TabsContent>
         
         <TabsContent value="summary" className="space-y-6">
-          <h2 className="text-2xl font-bold">{cityName} - Daily Summary</h2>
-          
-          {summaryDates.length > 0 ? (
-            <>
-              {/* Date selector */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {summaryDates.map(date => (
-                  <Button
-                    key={date}
-                    variant={selectedDate === date ? "default" : "outline"}
-                    onClick={() => setSelectedDate(date)}
-                    className="px-4 py-2"
-                  >
-                    {date}
-                  </Button>
-                ))}
-              </div>
-              
-              {/* Summary content */}
-              {currentSummary ? (
-                <DailySummary summary={currentSummary} />
-              ) : (
-                <p>No summary data available for selected date.</p>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-10">
-              <p>No daily summaries available yet. Weather data will be aggregated into daily summaries as more data is collected.</p>
-            </div>
-          )}
+          <DailySummaryTab 
+            cityName={cityName}
+            summaryDates={summaryDates}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            currentSummary={currentSummary}
+          />
         </TabsContent>
         
         <TabsContent value="alerts" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">{cityName} - Alert Settings</h2>
-              <AlertConfig cityId={selectedCityId} cityName={cityName} />
-            </div>
-            
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Alert History</h2>
-              <div className="bg-white rounded-lg shadow-lg p-4">
-                <AlertsList />
-              </div>
-            </div>
-          </div>
+          <AlertsTab 
+            selectedCityId={selectedCityId}
+            cityName={cityName}
+          />
         </TabsContent>
         
         <TabsContent value="settings">
@@ -290,13 +188,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Weather Monitoring System</h1>
-        <p className="text-gray-500">
-          Real-time weather data and analytics for major Indian metros
-        </p>
-      </header>
-      
+      <DashboardHeader />
       <main>
         {renderContent()}
       </main>
