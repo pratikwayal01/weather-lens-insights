@@ -52,7 +52,7 @@ const AlertConfig: React.FC<AlertConfigProps> = ({ cityId, cityName }) => {
       high_temp: cityAlertConfig?.high_temp ?? 35,
       low_temp: cityAlertConfig?.low_temp ?? 10,
       consecutive_readings: cityAlertConfig?.consecutive_readings ?? 2,
-      weather_condition: cityAlertConfig?.weather_condition ?? ''
+      weather_condition: cityAlertConfig?.weather_condition ?? 'none'
     }
   });
   
@@ -162,7 +162,7 @@ const AlertConfig: React.FC<AlertConfigProps> = ({ cityId, cityName }) => {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       <SelectItem value="Thunderstorm">Thunderstorm</SelectItem>
                       <SelectItem value="Drizzle">Drizzle</SelectItem>
                       <SelectItem value="Rain">Rain</SelectItem>
