@@ -1,7 +1,7 @@
-
-import { CityWeatherResponse, ProcessedWeatherData, AppConfig, CityInfo } from '@/types/weather';
+import { CityWeatherResponse, ProcessedWeatherData, CityInfo } from '@/types/weather';
 import { processWeatherData } from '@/utils/weatherUtils';
 import { toast } from '@/hooks/use-toast';
+import { useWeatherStore } from '@/store/weatherStore';
 
 // Fetch weather data for a specific city using coordinates
 export const fetchCityWeather = async (
@@ -15,9 +15,10 @@ export const fetchCityWeather = async (
     }
 
     const { lat, lon } = cityInfo;
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}`;
+    const units = useCelsius ? 'metric' : 'imperial';
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=${units}`;
     
-    console.log(`Fetching weather for ${cityInfo.name} with API key: ${apiKey.substring(0, 5)}...`);
+    console.log(`Fetching weather for ${cityInfo.name}...`);
     
     const response = await fetch(url);
     
@@ -55,12 +56,12 @@ export const fetchCityWeather = async (
   }
 };
 
-// Fetch weather data for all cities
+// Fetch weather data for all cities and update the store
 export const fetchAllCitiesWeather = async (
   cities: CityInfo[],
   apiKey: string,
   useCelsius: boolean = true
-): Promise<Record<string, ProcessedWeatherData>> => {
+): Promise<boolean> => {
   try {
     if (!apiKey || apiKey.trim() === '') {
       toast({
@@ -68,7 +69,7 @@ export const fetchAllCitiesWeather = async (
         description: "Please enter your OpenWeatherMap API key in the settings.",
         variant: "destructive",
       });
-      return {};
+      return false;
     }
 
     // Check if API key format is valid (to catch common mistakes)
@@ -78,20 +79,45 @@ export const fetchAllCitiesWeather = async (
         description: "The API key appears to be too short. Please check your OpenWeatherMap API key.",
         variant: "destructive",
       });
-      return {};
+      return false;
     }
 
-    const weatherPromises = cities.map(city => fetchCityWeather(city, apiKey, useCelsius));
-    const weatherResults = await Promise.all(weatherPromises);
+    // Set loading state
+    const store = useWeatherStore.getState();
+    store.setIsLoading(true);
     
-    // Filter out null results and create a record by city id
-    return weatherResults.reduce((acc, result) => {
-      if (result) {
-        const cityId = cities.find(c => c.name === result.city)?.id || '';
-        acc[cityId] = result;
+    let successCount = 0;
+    // Process cities one by one to properly add to the store
+    for (const city of cities) {
+      const weatherData = await fetchCityWeather(city, apiKey, useCelsius);
+      if (weatherData) {
+        // Add directly to the store
+        store.addWeatherData(city.id, weatherData);
+        successCount++;
       }
-      return acc;
-    }, {} as Record<string, ProcessedWeatherData>);
+    }
+    
+    // Update daily summaries with new data
+    store.updateDailySummaries();
+    
+    // Update last fetched timestamp and loading state
+    store.setLastUpdated(Date.now());
+    store.setIsLoading(false);
+    
+    if (successCount > 0) {
+      toast({
+        title: "Weather Updated",
+        description: `Successfully updated weather data for ${successCount} ${successCount === 1 ? 'city' : 'cities'}.`,
+      });
+      return true;
+    } else {
+      toast({
+        title: "No Data Retrieved",
+        description: "Could not fetch weather data for any city. Please check your settings and try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Failed to fetch weather for all cities:', error);
@@ -100,6 +126,9 @@ export const fetchAllCitiesWeather = async (
       description: `Could not fetch data for all cities. ${errorMessage}`,
       variant: "destructive",
     });
-    return {};
+    
+    // Reset loading state
+    useWeatherStore.getState().setIsLoading(false);
+    return false;
   }
 };
